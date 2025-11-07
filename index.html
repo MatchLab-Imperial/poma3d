@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POMA-3D: The Point Map Way to 3D Scene Understanding</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.1/css/academicons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333; /* Dark gray for body text */
+            text-align: justify;
+            background-color: #f4f7f6; /* Light gray-ish green background */
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+       .header-wrapper {
+        background: linear-gradient(120deg, #8d84a8 0%, #3a506b 50%, #95c7e1 100%);
+        color: #f1f6ff;
+        padding: 60px 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        z-index: 2;
+        background-attachment: fixed;
+        background-size: 200% 200%;
+        animation: flowGradient 9s ease-in-out infinite;
+        }
+        .header-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+        }
+        .header-wrapper h1 {
+            font-size: 2.2em;
+            margin-bottom: 11px;
+            color: #ffffff;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .header-wrapper .subtitle {
+            font-size: 1.4em;
+            margin-bottom: 25px;
+            padding: 0 20px;
+            color: #cce7ff;
+            display: inline-block;
+            overflow: hidden;
+        }
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .teaser-image-container {
+            margin: 25px 0;
+            text-align: center;
+            position: relative;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        .teaser-image-container img,
+        img[data-custom-zoomable] { /* Apply zoom cursor to images intended for custom zoom */
+            max-width: 95%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+            cursor: pointer; /* Changed from zoom-in to pointer for consistency */
+        }
+        .teaser-image-container:hover img {
+            transform: translateZ(20px) rotateX(5deg);
+        }
+        .resource-buttons {
+            margin-top: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+        .resource-buttons .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: rgba(224, 247, 250, 0.1);
+            color: #ffffff;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+        }
+        .resource-buttons .button:hover {
+            background-color: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.5);
+        }
+        .authors-section {
+            text-align: center;
+            margin: -40px auto 40px;
+            padding: 25px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 0;
+            position: relative;
+            z-index: 3;
+            max-width: 800px;
+        }
+        .authors-section h3 {
+            margin-bottom: 15px;
+            color: #003973;
+        }
+        .authors-section p {
+            margin: 8px 0;
+            font-size: 1em;
+        }
+        .section {
+            margin: 60px 0;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+        .section h2 {
+            color: black;
+            border-bottom: 3px solid #77a0f2;
+            padding-bottom: 12px;
+            margin-bottom: 25px;
+            font-size: 2em;
+            position: relative;
+        }
+        .section:hover h2::after {
+            width: 100px;
+        }
+        .section h3 {
+            color: #005f8d;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .section p, .section ul, .section blockquote {
+            margin-bottom: 1.2em;
+            font-size: 1.05em;
+        }
+        .section ul {
+            list-style-position: inside;
+            padding-left: 20px;
+        }
+        .section li {
+            margin-bottom: 0.6em;
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+            border-left: 5px solid #0077b6;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+        .highlight-box:hover {
+            transform: translateX(5px);
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin: 25px 0;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+        }
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+        .feature-card:hover::before {
+            transform: translateX(100%);
+        }
+        .feature-card:hover {
+            box-shadow: 0 0 25px 8px rgba(0, 191, 160, 0.5);
+            transform: scale(1.03);
+        }
+        .feature-card h3 {
+            margin-top: 0;
+            color: #005f8d;
+            font-size: 1.25em;
+        }
+        .feature-card h3 .fas {
+            margin-right: 10px;
+            color: #008ea0;
+        }
+        .citation-section {
+            background-color: #eaebec;
+            padding: 25px;
+            border-radius: 8px;
+            margin-top: 40px;
+            position: relative;
+            z-index: 1;
+        }
+        .citation-section pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #ffffff;
+        }
+        .figure-caption {
+            text-align: center;
+            font-style: italic;
+            color: #555;
+            margin-top: 12px;
+            font-size: 0.95em;
+        }
+        .header-wrapper .figure-caption {
+            color: #e0f7fa;
+        }
+
+
+        .table-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        font-family: 'Inter', 'Arial', sans-serif;
+        font-size: 0.9em;
+        color: #222;
+        border-collapse: collapse;
+        }
+
+        table {
+        width: 100%;
+        border-collapse: collapse;
+        border-spacing: 0;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+
+        th, td {
+        padding: 8px 10px;
+        text-align: center;
+        border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+        background: #f4f6f8;
+        font-weight: 600;
+        font-size: 0.9em;
+        }
+
+        td:first-child, th:first-child {
+        text-align: left;
+        font-weight: 600;
+        }
+
+        tr.section-header td {
+        background: #f0f0f0;
+        font-style: italic;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        }
+
+        .best {
+        background: #d6f5e5;
+        font-weight: 700;
+        color: black;
+        }
+
+        .second {
+        background: #f3e3f5;
+        color: black;
+        }
+        .equation {
+            display: block;
+            text-align: center;
+            margin: 25px 0;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.15em;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 6px;
+            border: 1px solid #d1d9e0;
+        }
+        .key-innovations-section h2 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 30px;
+        }
+        @media (max-width: 768px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            .frames-preview {
+                grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); /* Smaller minmax for mobile */
+            }
+        }
+
+        .scroll-animate {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .scroll-animate.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes flowGradient {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+
+        .qa-subsection {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed #0077b6;
+        }
+        .qa-subsection h3 {
+            text-align: center;
+            color: #005f8d;
+            margin-bottom: 25px;
+        }
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .preview {
+            cursor: pointer;
+            transition: opacity 0.2s, box-shadow 0.2s;
+            opacity: 0.5;
+            height: 60px;
+            width: auto;
+            margin-right: 10px;
+            margin-left: 10px;
+            border-radius: 5px;
+            border: 2px solid transparent;
+        }
+        div .preview-video-active,
+        .preview:hover {
+            opacity: 1.0;
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .preview-video-active {
+             opacity: 1.0 !important;
+             border: 2px solid #00bfa0 !important;
+             box-shadow: 0 0 10px rgba(0, 191, 160, 0.5) !important;
+        }
+        .qa-subsection .l-body {
+            grid-column: page;
+        }
+
+        .video-container {
+            text-align: center;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        .video-container video {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .video-label {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #005f8d;
+        }
+        .speed-reminder {
+            margin-top: 8px;
+            color: #666;
+            font-size: 0.95em;
+        }
+        .video-qa {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .frames-preview {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 4px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .frame-item {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            border-radius: 4px;
+            transition: transform 0.2s;
+        }
+        .frame-item:hover {
+            transform: scale(1.05);
+        }
+        .frame-item img { /* Target images within frame-item for zoom */
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer; /* Changed from zoom-in to pointer */
+            transition: transform 0.3s ease;
+        }
+        .frame-number {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 2px 4px;
+            font-size: 10px;
+            border-radius: 2px;
+        }
+        
+        /* Styles for the custom image viewer */
+        #custom-image-viewer {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.85); /* Black w/ opacity */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #viewer-image {
+            display: block;
+            margin: auto;
+            max-width: 90%;
+            max-height: 90vh; /* Max height relative to viewport height */
+            border-radius: 8px;
+            animation: zoomInAnimation 0.3s ease-out;
+        }
+
+        @keyframes zoomInAnimation {
+            from {transform: scale(0.5); opacity: 0;}
+            to {transform: scale(1); opacity: 1;}
+        }
+
+        .close-viewer-btn {
+            position: absolute;
+            top: 25px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close-viewer-btn:hover,
+        .close-viewer-btn:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header-wrapper">
+        <div class="container header-content">
+            <h1>POMA-3D: The Point Map Way to 3D Scene Understanding</h1>
+            <div class="header-authors" style="margin-top: 20px; margin-bottom: 20px; text-align: center; font-size: 1.2em; color: #e0f7fa;">
+                <p style="margin: 8px 0;">
+                    <a href="https://yebulabula.github.io/" target="_blank" style="color: #e0e5fa; text-decoration: none;">Ye Mao</a><sup style="color: #cce7ff;"></sup>,
+                    <a href="https://github.com/Roldbach" target="_blank" style="color: #e0f7fa; text-decoration: none;">Weixun Luo</a><sup style="color: #cce7ff;"></sup>,
+                    <a href="https://ranrhuang.github.io/" target="_blank" style="color: #e0f7fa; text-decoration: none;">Ranran Huang</a><sup style="color: #cce7ff;"></sup>,
+                    <a href="https://tomtomtommi.github.io/" target="_blank" style="color: #e0f7fa; text-decoration: none;">Junpeng Jing</a><sup style="color: #cce7ff;"></sup>,
+                    <a href="https://profiles.imperial.ac.uk/k.mikolajczyk" target="_blank" style="color: #e0f7fa; text-decoration: none;">Krystian Mikolajczyk</a><sup style="color: #e0f7fa;"></sup>
+                </p>
+                <p style="margin: 8px 0; font-size: 0.85em; color: #e0f7fa;">
+                    <sup></sup>Imperial College London, MatchLab &nbsp;&nbsp;
+                </p>
+
+                <div class="resource-buttons" style="margin-top: 20px; text-align: center;">
+  <a href="https://arxiv.org/abs/2505.20279" class="button" target="_blank"
+     style="
+       font-size: 0.8em;
+       padding: 8px 14px;
+       margin: 0 6px;
+       border-radius: 6px;
+       background: #1c2541;
+       color: #f1f6ff;
+       text-decoration: none;
+       display: inline-flex;
+       align-items: center;
+       transition: all 0.25s ease;
+     ">
+    <i class="fas fa-file-alt" style="font-size: 1.1em; margin-right: 6px;"></i>
+    Paper
+  </a>
+
+  <a href="https://huggingface.co/datasets/MatchLab/PointMapVerse" class="button" target="_blank"
+     style="
+       font-size: 0.8em;
+       padding: 8px 14px;
+       margin: 0 6px;
+       border-radius: 6px;
+       background: #1c2541;
+       color: #f1f6ff;
+       text-decoration: none;
+       display: inline-flex;
+       align-items: center;
+       transition: all 0.25s ease;
+     ">
+    <img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
+         alt="Hugging Face"
+         style="height: 18px; vertical-align: middle; margin-right: 6px;">
+    Dataset
+  </a>
+
+  <a href="https://huggingface.co/spaces/MatchLab/poma3d_demo" class="button" target="_blank"
+     style="
+       font-size: 0.8em;
+       padding: 8px 14px;
+       margin: 0 6px;
+       border-radius: 6px;
+       background: #1c2541;
+       color: #f1f6ff;
+       text-decoration: none;
+       display: inline-flex;
+       align-items: center;
+       transition: all 0.25s ease;
+     ">
+    <img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
+         alt="Hugging Face"
+         style="height: 18px; vertical-align: middle; margin-right: 6px;">
+    Demo
+  </a>
+</div>
+            </div>
+            
+            <div class="architecture-video-container scroll-animate" style="margin-top: 25px; margin-bottom: 25px; /* Adjusted margins */ text-align: center; position: relative; transform-style: preserve-3d; perspective: 1000px;">
+                 <video
+                src="videos/fig1.mp4"
+                autoplay
+                muted
+                loop
+                playsinline
+                style="max-width: 100%; height: auto; border-radius: 16px; margin-bottom:10px; box-shadow: 0 8px 16px rgba(0,0,0,0.25); cursor: pointer;"
+                data-custom-zoomable>
+                Your browser does not support HTML5 video.
+                </video>
+                <p class="figure-caption" style="color: #e0f7fa; margin-top: 10px;"><b>Figure: POMA-3D Overview.</b> POMA-3D is a self-supervised 3D model pretrained on the large-scale point map dataset ScenePoint
+                via alignment with 2D foundation models and the POMA-JEPA objective. The 3D features from pretrained POMA-3D transfer effectively to diverse 3D understanding tasks, including 3D visual question answering, embodied navigation, scene retrieval, and localization.</p>
+                <p class="subtitle" id="typewriter-subtitle" style="font-size: 1em; color: #e0f7fa; margin-top: 15px; text-align: center; padding: 0 15px; max-width: 80%; margin-left: auto; margin-right: auto;">POMA-3D is the first self-supervised 3D representation learning model based on multiview point maps.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section id="abstract" class="section scroll-animate">
+            <h2>Abstract</h2>
+            <p>In this paper, we present POMA-3D, the first self-supervised model for 3D understanding learned from point maps. For pretraining POMA-3D, we introduce ScenePoint, a large-scale point map dataset constructed from 6K room-level RGB-D scenes and 1M 2D image scenes.
+            Point maps encode explicit 3D coordinates within a structured 2D grid, thus share the same format as the input of 2D foundation models, which we use to leverage rich 2D priors via vision-language alignment during training.
+            Moreover, as point maps are view-dependent with respect to a canonical space, we introduce POMA-JEPA, a joint embedding architecture that enforces geometrically consistent point map features across views.
+            Experiments show that POMA-3D serves as a strong backbone for both specialist and generalist 3D understanding.
+            Its features benefit 3D-related tasks, including 3D visual question answering, embodied navigation, scene retrieval, and embodied localization, all achieved using only geometric inputs (i.e., 3D coordinates).
+            Our POMA-3D explores a <b>point map way to 3D scene understanding</b>, addressing the scarcity of pretrained priors and limited data in 3D representation learning.</p>
+        </section>
+
+        <section id="architecture" class="section scroll-animate">
+        <h2>POMA-3D Architecture</h2>
+        <div style="text-align: center;">
+            <video
+            src="videos/fig2.mp4"
+            autoplay
+            muted
+            playsinline
+            style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom:10px; box-shadow: 0 8px 16px rgba(0,0,0,0.25); cursor: pointer;"
+            data-custom-zoomable>
+            Your browser does not support HTML5 video.
+            </video>
+            <p class="figure-caption" style="text-align: left; max-width: 900px; margin: 0 auto;">
+            POMA-3D is pretrained with two objectives:
+            (1) aligning [CLS] embeddings from the point map context encoder with image and text embeddings from the frozen FG-CLIP using
+            L<sub>view</sub> and L<sub>scene</sub>, and
+            (2) predicting masked point map embeddings from the target encoder using unmasked embeddings from the context encoder via a predictor network optimized by
+            L<sub>pjepa</sub>.
+            The target encoder is updated via EMA and used for downstream 3D understanding.
+            </p>
+        </div>
+        </section>
+        
+        <section id="3D Visual Question Answering" class="section scroll-animate">
+        <h2>3D VQA & Embodied Navigation Results</h2>
+        <div style="text-align: center;">
+            <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>Modality</th>
+                    <th colspan="2">ScanQA</th>
+                    <th colspan="2">SQA3D</th>
+                    <th colspan="2">Hypo3D</th>
+                    <th colspan="2">MSNN</th>
+                </tr>
+                <tr>
+                    <th></th><th></th>
+                    <th>EM@1</th><th>EM@10</th>
+                    <th>EM@1</th><th>EM@10</th>
+                    <th>EM@1</th><th>EM@10</th>
+                    <th>4 dire.</th><th>8 dire.</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr class="section-header"><td colspan="10">3D LLM Models</td></tr>
+                <tr><td>LEO</td><td>PC</td><td>24.5</td><td>–</td><td>50.0</td><td>–</td><td>16.2</td><td>–</td><td>–</td><td>–</td></tr>
+                <tr><td>LLaVA-3D</td><td>RGB-D</td><td>27.0</td><td>–</td><td>55.6</td><td>–</td><td>33.1</td><td>–</td><td>22.9</td><td>12.3</td></tr>
+                <tr><td>Video-3D LLM</td><td>RGB-D</td><td>30.1</td><td>–</td><td>58.6</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+
+                <tr class="section-header"><td colspan="10">2D LMM Models</td></tr>
+                <tr><td>Qwen2.5-VL 7B</td><td>RGB</td><td class="best">23.7</td><td>–</td><td class="second">47.8</td><td>–</td><td>30.9</td><td>–</td><td>21.8</td><td>2.87</td></tr>
+                <tr><td>LLaVA-OV 7B</td><td>RGB</td><td>20.8</td><td>–</td><td>47.7</td><td>–</td><td class="second">33.2</td><td>–</td><td class="second">24.0</td><td class="second">5.83</td></tr>
+                <tr><td>SplatTalk</td><td>3DGS</td><td class="second">22.4</td><td>–</td><td>47.6</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                <tr><td><b>POMA-3D<sub>llm</sub></b></td><td><b>PM</b></td>
+                    <td>21.3</td><td>–</td>
+                    <td class="best"><b>51.6</b></td><td>–</td>
+                    <td class="best"><b>35.9</b></td><td>–</td>
+                    <td class="best"><b>36.9</b></td>
+                    <td class="best"><b>21.4</b></td></tr>
+
+                <tr class="section-header"><td colspan="10">Specialist Models</td></tr>
+                <tr><td>ScanQA</td><td>PC</td><td>21.1</td><td>–</td><td>47.2</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                <tr><td>ScanRefer + MCAN</td><td>PC</td><td>18.6</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                <tr><td>SQA3D</td><td>PC</td><td>–</td><td>–</td><td>46.6</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                <tr><td>3D-ViSTA</td><td>PC</td><td class="second">22.4</td><td class="second">52.1</td><td>48.5</td><td>85.6</td><td>31.0</td><td>81.2</td><td class="second">39.9</td><td>20.1</td></tr>
+                <tr><td>SceneVerse </td><td>PC</td><td class="best">22.7</td><td>51.5</td><td class="second">49.9</td><td>85.0</td><td class="second">31.6</td><td>80.3</td><td>36.0</td><td>19.5</td></tr>
+                <tr><td>FG-CLIP </td><td>PM</td><td>20.9</td><td>49.9</td><td>49.5</td><td class="second">89.7</td><td>31.1</td><td class="second">82.1</td><td>39.3</td><td class="second">20.4</td></tr>
+                <tr><td><b>POMA-3D<sub>spec</sub></b></td><td><b>PM</b></td>
+                    <td>22.3</td><td class="best"><b>52.3</b></td>
+                    <td class="best"><b>51.1</b></td><td class="best"><b>91.2</b></td>
+                    <td class="best"><b>33.4</b></td><td class="best"><b>84.8</b></td>
+                    <td class="best"><b>40.4</b></td><td class="best"><b>21.2</b></td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <p class="figure-caption" style="text-align: left; max-width: 900px; margin: 0 auto;">
+            3D VQA results on ScanQA, SQA3D, and Hypo3D, and embodied navigation results on MSNN. “4 dire.” and “8 dire.” denote four- and eight-way navigation, respectively.
+            </p>
+        </div>
+        </section>
+        
+        <section id="Scene Retrieval" class="section scroll-animate">
+        <h2>Scene Retrieval Results</h2>
+        <div style="text-align: center;">
+            <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th rowspan="2">Method</th>
+                <th rowspan="2">Mod.</th>
+                <th colspan="4">ScanRefer</th>
+                <th colspan="4">Nr3D</th>
+                <th colspan="4">Sr3D</th>
+            </tr>
+            <tr>
+                <th>R@1-1</th><th>R@1-5</th><th>R@5-1</th><th>R@5-5</th>
+                <th>R@1-1</th><th>R@1-5</th><th>R@5-1</th><th>R@5-5</th>
+                <th>R@1-1</th><th>R@1-5</th><th>R@5-1</th><th>R@5-5</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr>
+                <td>3D-ViSTA</td><td>PC</td>
+                <td>0.48</td><td>2.27</td><td>0.24</td><td>2.03</td>
+                <td>0.45</td><td>0.60</td><td>0.15</td><td>0.60</td>
+                <td>0.33</td><td>1.15</td><td>0.33</td><td>1.48</td>
+            </tr>
+
+            <tr>
+                <td>SceneVerse</td><td>PC</td>
+                <td>0.24</td><td>2.27</td><td>0.83</td><td>2.03</td>
+                <td>0.26</td><td>1.82</td><td>0.26</td><td>1.56</td>
+                <td>0.28</td><td>1.99</td><td>0.28</td><td>1.70</td>
+            </tr>
+
+            <tr>
+                <td>FG-CLIP</td><td>RGB</td>
+                <td class="second">5.10</td><td class="second">16.4</td><td class="second">14.9</td><td class="second">42.2</td>
+                <td class="second">1.37</td><td class="second">6.71</td><td class="second">5.18</td><td class="second">17.2</td>
+                <td class="second">1.35</td><td class="second">6.42</td><td class="second">1.86</td><td class="second">10.1</td>
+            </tr>
+
+            <tr>
+                <td>FG-CLIP</td><td>PM</td>
+                <td>0.50</td><td>2.00</td><td>0.25</td><td>2.81</td>
+                <td>0.46</td><td>1.98</td><td>0.46</td><td>2.13</td>
+                <td>0.34</td><td>1.18</td><td>0.17</td><td>0.84</td>
+            </tr>
+
+            <tr>
+                <td><b>POMA-3D</b></td><td><b>PM</b></td>
+                <td class="best"><b>9.31</b></td>
+                <td class="best"><b>27.9</b></td>
+                <td class="best"><b>29.4</b></td>
+                <td class="best"><b>59.4</b></td>
+                <td class="best"><b>8.10</b></td>
+                <td class="best"><b>15.7</b></td>
+                <td class="best"><b>15.0</b></td>
+                <td class="best"><b>42.2</b></td>
+                <td class="best"><b>3.89</b></td>
+                <td class="best"><b>6.59</b></td>
+                <td class="best"><b>20.7</b></td>
+                <td class="best"><b>–</b></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+
+            <p class="figure-caption" style="text-align: left; max-width: 900px; margin: 0 auto;">
+            Scene Retrieval Results. The metric R@M-N denotes recall@N for retrieving the correct 3D scene from M language utterances. All methods are evaluated in the zero-shot setting. 
+            </p>
+        </div>
+        </section>
+
+         <section id="Embodied Localization" class="section scroll-animate">
+        <h2>Embodied Localization Results</h2>
+        <div style="text-align: center;">
+            <img
+            src="imgs/fig4.png"
+            alt="POMA-3D Pretraining Objectives"
+            style="
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+                cursor: pointer;
+            "
+            data-custom-zoomable>
+
+            <p class="figure-caption" style="text-align: left; max-width: 900px; margin: 0 auto;">
+            Qualitative results of embodied localization. Top: text to describe the current agent’s situation. Bottom: merged multi-view point maps, where red regions indicate the point map views retrieved by POMA-3D based on the situational text.
+            </p>
+        </div>
+        </section>
+
+        <section class="citation-section scroll-animate">
+            <h2>Citation</h2>
+            <pre>@article{vlm3r2025yourname,
+ title={POMA-3D: The Point Map Way to 3D Scene Understanding},
+ author={Author One and Author Two and Author Three and et al.},
+ journal={Advances in Neural Information Processing Systems (NeurIPS)},
+ year={2025}
+}</pre>
+        </section>
+    </div>
+
+    <div id="custom-image-viewer">
+        <span class="close-viewer-btn">&times;</span>
+        <img id="viewer-image" src="#" alt="Enlarged Image">
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/@babel/polyfill@7.12.1/dist/polyfill.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@5.16.0/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-collection@1.0.7/dist/d3-collection.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize KaTeX rendering
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false}, {left: "\\[", right: "\\]", display: true}
+                ]
+            });
+
+            const videos = document.querySelectorAll('.video-music');
+            videos.forEach(video => { video.playbackRate = 2.0; });
+
+            const firstPreview = document.getElementById('VLM3Rvideo1Preview');
+            if (firstPreview) {
+                switchVideo('VLM3R', 'VLM3Rvideo1Container', 'VLM3Rvideo1Preview');
+            }
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+
+            const animatedElements = document.querySelectorAll('.scroll-animate');
+            const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
+            const observer = new IntersectionObserver((entries, observerInstance) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observerInstance.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            animatedElements.forEach(el => observer.observe(el));
+
+            const subtitleElement = document.getElementById('typewriter-subtitle');
+            if (subtitleElement) {
+                const fullText = subtitleElement.textContent;
+                subtitleElement.textContent = '';
+                let charIndex = 0;
+                function typeCharacter() {
+                    if (charIndex < fullText.length) {
+                        subtitleElement.textContent += fullText.charAt(charIndex);
+                        charIndex++;
+                        setTimeout(typeCharacter, 50);
+                    }
+                }
+                setTimeout(typeCharacter, 500);
+            }
+
+            // Custom Image Viewer Logic
+            const imageViewer = document.getElementById('custom-image-viewer');
+            const viewerImage = document.getElementById('viewer-image');
+            const closeBtn = document.querySelector('.close-viewer-btn');
+
+            // Function to open the viewer
+            function openImageViewer(imgSrc) {
+                viewerImage.src = imgSrc;
+                imageViewer.style.display = 'flex'; // Use flex to center content
+                document.body.style.overflow = 'hidden'; // Prevent scrolling of background page
+            }
+
+            // Function to close the viewer
+            function closeImageViewer() {
+                imageViewer.style.display = 'none';
+                viewerImage.src = '#'; // Clear src
+                document.body.style.overflow = 'auto'; // Restore scrolling
+            }
+
+            // Add click listeners to all zoomable images
+            // These are images with 'data-custom-zoomable' attribute or images inside '.frame-item'
+            document.querySelectorAll('img[data-custom-zoomable], .frame-item img').forEach(img => {
+                img.addEventListener('click', function(event) {
+                    // If the image is inside a .frame-item, its parent div might have its own click handler (seekToFrame).
+                    // We want the image click to prioritize zoom.
+                    // However, seekToFrame is on the .frame-item div, not the img itself.
+                    // So, this click on the img should just open the viewer.
+                    event.stopPropagation(); // Prevent event from bubbling up to parent .frame-item's onclick for seekToFrame
+                    openImageViewer(this.src);
+                });
+            });
+            
+            // Event listener for the close button
+            closeBtn.addEventListener('click', closeImageViewer);
+
+            // Event listener to close viewer when clicking on the backdrop
+            imageViewer.addEventListener('click', function(event) {
+                if (event.target === imageViewer) { // Clicked on the backdrop itself
+                    closeImageViewer();
+                }
+            });
+
+            // Event listener for ESC key to close viewer
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && imageViewer.style.display === 'flex') {
+                    closeImageViewer();
+                }
+            });
+        });
+
+        function switchVideo(prefix, videoId, previewIdToActivate) {
+            const videoContainers = document.querySelectorAll(`div[id^="${prefix}video"][class*="video-container"]`);
+            videoContainers.forEach(container => {
+                container.style.display = 'none';
+                const video = container.querySelector('video');
+                if (video) { video.currentTime = 0; video.pause(); }
+            });
+            const previews = document.querySelectorAll(`img[id^="${prefix}videoPreview"].preview`);
+            previews.forEach(preview => { preview.classList.remove('preview-video-active'); });
+            const targetVideoContainer = document.getElementById(videoId);
+            if (targetVideoContainer) { targetVideoContainer.style.display = 'block'; }
+            const targetPreview = document.getElementById(previewIdToActivate);
+            if (targetPreview) { targetPreview.classList.add('preview-video-active'); }
+        }
+
+        function toggleAnswer(answerId, element) {
+            const answerElement = document.getElementById(answerId);
+            const isVisible = answerElement.style.display === "block";
+            answerElement.style.display = isVisible ? "none" : "block";
+            element.innerHTML = isVisible ? '<i class="fas fa-eye"></i> Click for Answer' : '<i class="fas fa-eye-slash"></i> Hide Answer';
+        }
+
+        function handleVideoError(videoElement) {
+            console.error('Video loading error:', videoElement.src);
+            const container = videoElement.closest('.video-container');
+            if (container) {
+                let errorDiv = container.querySelector('.video-error-message');
+                if (!errorDiv) {
+                    errorDiv = document.createElement('div');
+                    errorDiv.className = 'video-error-message';
+                    errorDiv.style.color = 'red';
+                    errorDiv.textContent = 'Error loading video. Please try again later.';
+                    videoElement.parentNode.insertBefore(errorDiv, videoElement.nextSibling);
+                }
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function handleVideoLoaded(videoElement) {
+            console.log('Video loaded:', videoElement.src);
+            const container = videoElement.closest('.video-container');
+            if (container) {
+                const errorDiv = container.querySelector('.video-error-message');
+                if (errorDiv) errorDiv.style.display = 'none';
+            }
+        }
+
+        function seekToFrame(frameItemElement, frameNumber) {
+            // frameItemElement is the div.frame-item that was clicked
+            const videoContainer = frameItemElement.closest('.video-container');
+            const video = videoContainer.querySelector('video');
+            if (video) {
+                // The frameNumber parameter is 0-indexed (0 to 31 for 32 frames).
+                // This value is used directly as the target time in seconds.
+                // This assumes that each "frame" in the preview corresponds to 1 second of video,
+                // or that the video's keyframes/segments align with these integer second marks.
+                let targetTime = frameNumber; 
+                
+                video.currentTime = targetTime;
+                if (video.paused) { // Optional: play if paused
+                    video.play();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
